@@ -242,7 +242,7 @@ html,body{height:100%;overflow:hidden;background:#050608;color:#d8d2c4;
 </div>
 
 <!-- INTRO -->
-<div class="screen" id="scr-start">
+<div class="screen on" id="scr-start">
   <div class="wrap">
     <div class="stitle">Кооперативная детективная игра</div>
     <div class="h1">СЛЕДСТВИЕ</div>
@@ -372,7 +372,7 @@ const ERAS = [
     alibis:['был на ночной смене, мастер подтвердит','стояла в очереди за колбасой',
             'гостила у сестры в Подольске','сидел дома, слушал радио',
             'дежурил в народной дружине','ездил на целину с бригадой'],
-    palette:{ wall:0x4a4238, floor:0x2b1f12, wood:0x5a3a20, cloth:0x3a2a1e } },
+    palette:{ wall:0x6a655c, floor:0x3a2e22, wood:0x5a3a20, cloth:0x3a2a1e } },
   { year:1979, era:'СССР · эпоха застоя',
     places:['квартира в панельном доме','гаражный кооператив «Мотор»',
             'кабинет директора НИИ','ресторан «Прага»','склад овощной базы'],
@@ -383,7 +383,7 @@ const ERAS = [
     alibis:['был в бане с товарищами','сидел на даче, копал грядки',
             'вёз груз в Калинин, есть путёвка','был на дне рождения у тёщи',
             'смотрел хоккей у соседа','ловил рыбу на Оке'],
-    palette:{ wall:0x3a352c, floor:0x2a1e12, wood:0x6a4a28, cloth:0x4a3a24 } },
+    palette:{ wall:0x5a554c, floor:0x3a2e22, wood:0x6a4a28, cloth:0x4a3a24 } },
   { year:1993, era:'Россия · лихие девяностые',
     places:['квартира в новостройке','палатка у метро','офис фирмы «Вектор»',
             'автосервис на обочине','ночной клуб «Метелица»'],
@@ -394,7 +394,7 @@ const ERAS = [
     alibis:['был на стрелке, братва подтвердит','сидел в кабаке до утра',
             'ездил в Питер за товаром','был у любовницы, но об этом молчок',
             'чинил машину в гараже','играл в казино'],
-    palette:{ wall:0x2e2a26, floor:0x1f1810, wood:0x5a3a22, cloth:0x30202a } },
+    palette:{ wall:0x4a4642, floor:0x2e2218, wood:0x5a3a22, cloth:0x30202a } },
   { year:2007, era:'Россия · нулевые',
     places:['квартира в ЖК «Лазурный»','офис строительной компании',
             'подземная парковка бизнес-центра','загородный коттедж','фитнес-клуб'],
@@ -406,7 +406,7 @@ const ERAS = [
     alibis:['был на совещании, есть протокол','летал в Москву, посадочный при мне',
             'ужинал с партнёрами в ресторане','был в фитнес-клубе, тренер видел',
             'сидел с ребёнком дома','застрял в пробке на МКАД'],
-    palette:{ wall:0x3a3630, floor:0x24201a, wood:0x6a4a30, cloth:0x2a2a3a } },
+    palette:{ wall:0x5a5650, floor:0x342e24, wood:0x6a4a30, cloth:0x2a2a3a } },
   { year:2024, era:'Россия · наши дни',
     places:['квартира в новом ЖК','коворкинг в центре','даркстор на первом этаже',
             'загородный дом в посёлке','студия в бывшем НИИ'],
@@ -417,7 +417,7 @@ const ERAS = [
     alibis:['был на удалёнке, есть логи созвона','ужинал с друзьями в баре',
             'ехал на самокате, GPS подтвердит','был в спортзале, есть отметка',
             'сидел с ребёнком','был в аэропорту, есть посадочный'],
-    palette:{ wall:0x2a2c30, floor:0x1a1c20, wood:0x4a3a2a, cloth:0x22283a } }
+    palette:{ wall:0x4a4c50, floor:0x2a2c30, wood:0x4a3a2a, cloth:0x22283a } }
 ];
 
 // Шаблоны улик — каждая привязана к инструменту и к подозреваемому
@@ -577,13 +577,13 @@ renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMappingExposure = 1.2; // Увеличено с 1.05
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 app.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x050608);
-scene.fog = new THREE.FogExp2(0x050608, 0.028);
+scene.background = new THREE.Color(0x1a1c20); // Светлее
+scene.fog = new THREE.FogExp2(0x1a1c20, 0.028);
 
 const camera = new THREE.PerspectiveCamera(65, innerWidth/innerHeight, 0.05, 200);
 camera.rotation.order = 'YXZ';
@@ -595,10 +595,14 @@ composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
 /* ---- Свет ---- */
-const hemi = new THREE.HemisphereLight(0x8a9ab8, 0x1a1410, 0.45);
+// Яркий AmbientLight, чтобы комната не была чёрной
+const ambient = new THREE.AmbientLight(0xffffff, 1.2);
+scene.add(ambient);
+
+const hemi = new THREE.HemisphereLight(0xd0d8f0, 0x2a2018, 1.5); // Увеличено
 scene.add(hemi);
 
-const key = new THREE.DirectionalLight(0xffd9a0, 0.9);
+const key = new THREE.DirectionalLight(0xfff0d0, 2.0); // Увеличено
 key.position.set(-5, 9, 4);
 key.castShadow = true;
 key.shadow.mapSize.set(2048, 2048);
@@ -607,11 +611,11 @@ key.shadow.camera.top = 12; key.shadow.camera.bottom = -12;
 key.shadow.bias = -0.0006;
 scene.add(key);
 
-const fill = new THREE.DirectionalLight(0x8899bb, 0.3);
+const fill = new THREE.DirectionalLight(0xaabbee, 1.0); // Увеличено
 fill.position.set(6, 6, -8);
 scene.add(fill);
 
-const rim = new THREE.DirectionalLight(0xff8866, 0.35);
+const rim = new THREE.DirectionalLight(0xffaa88, 0.8); // Увеличено
 rim.position.set(0, 3, 9);
 scene.add(rim);
 
@@ -706,10 +710,10 @@ function texChalk(){
   });
 }
 
-const TEX_WALL_CRIME = texWall(0x3a352c);
-const TEX_WALL_HOME  = texWall(0x36302a);
-const TEX_FLOOR_CRIME = texFloor(0x2a1e12);
-const TEX_FLOOR_HOME  = texFloor(0x241a10);
+const TEX_WALL_CRIME = texWall(0x6a655c);
+const TEX_WALL_HOME  = texWall(0x5a544c);
+const TEX_FLOOR_CRIME = texFloor(0x4a3e32);
+const TEX_FLOOR_HOME  = texFloor(0x3a2e22);
 const TEX_WOOD = texWood(0x5a3a20);
 const TEX_CHALK = texChalk();
 
@@ -1498,33 +1502,38 @@ async function playCutscene({ year, text, sub, duration = 3200, skippable = true
    16. ЗАГРУЗКА ЛОКАЦИИ
    ================================================================ */
 function loadLocation(idx){
-  clearWorld();
-  const loc = state.caseData.locations[idx];
-  state.currentLocIdx = idx;
+  try {
+    clearWorld();
+    const loc = state.caseData.locations[idx];
+    state.currentLocIdx = idx;
 
-  if(loc.type === 'crime') buildCrimeScene(state.caseData.era, loc);
-  else buildVictimHome(state.caseData.era, loc);
+    if(loc.type === 'crime') buildCrimeScene(state.caseData.era, loc);
+    else buildVictimHome(state.caseData.era, loc);
 
-  spawnLocationEvidence(loc);
+    spawnLocationEvidence(loc);
 
-  // Позиция игрока
-  player.pos.set(0, 1.62, 5.5);
-  player.yaw = 0;
+    // Позиция игрока
+    player.pos.set(0, 1.62, 5.5);
+    player.yaw = 0;
 
-  renderCaseInfo();
-  renderCollectedEvidence();
-  updateLeaveButton();
+    renderCaseInfo();
+    renderCollectedEvidence();
+    updateLeaveButton();
 
-  // Заголовок локации
-  const lt = $('loc-title');
-  lt.innerHTML = `${loc.name}<small>${loc.subtitle}</small>`;
-  lt.classList.add('on');
-  setTimeout(() => lt.classList.remove('on'), 3500);
+    // Заголовок локации
+    const lt = $('loc-title');
+    lt.innerHTML = `${loc.name}<small>${loc.subtitle}</small>`;
+    lt.classList.add('on');
+    setTimeout(() => lt.classList.remove('on'), 3500);
 
-  setTool('eyes');
-  state.phase = 'scene';
-  $('hud').classList.add('on');
-  $('crosshair').classList.add('on');
+    setTool('eyes');
+    state.phase = 'scene';
+    $('hud').classList.add('on');
+    $('crosshair').classList.add('on');
+  } catch(e) {
+    console.error('Ошибка загрузки локации:', e);
+    alert('Ошибка загрузки локации: ' + e.message);
+  }
 }
 
 /* ================================================================
@@ -1578,53 +1587,58 @@ loop();
    19. ИГРОВОЙ ФЛОУ
    ================================================================ */
 async function startGame(){
-  state.caseData = generateCase();
-  state.collected = [];
-  state.chainLinks = {};
+  try {
+    state.caseData = generateCase();
+    state.collected = [];
+    state.chainLinks = {};
 
-  $('hud').classList.remove('on');
-  $('crosshair').classList.remove('on');
-  showScreen(null);
-  await sleep(300);
+    $('hud').classList.remove('on');
+    $('crosshair').classList.remove('on');
+    showScreen(null);
+    await sleep(300);
 
-  // Пролог
-  await playCutscene({
-    year: state.caseData.era.year,
-    text: `${state.caseData.era.era}.\n${state.caseData.place}.\n\nВыезд следственной группы.`,
-    sub: 'Дело № ' + state.caseData.num,
-    duration: 3400
-  });
+    // Пролог
+    await playCutscene({
+      year: state.caseData.era.year,
+      text: `${state.caseData.era.era}.\n${state.caseData.place}.\n\nВыезд следственной группы.`,
+      sub: 'Дело № ' + state.caseData.num,
+      duration: 3400
+    });
 
-  // Локация 1 — место преступления
-  await new Promise(resolve => {
-    state.resolveLocation = resolve;
-    loadLocation(0);
-  });
+    // Локация 1 — место преступления
+    await new Promise(resolve => {
+      state.resolveLocation = resolve;
+      loadLocation(0);
+    });
 
-  // Переезд
-  await playCutscene({
-    year: state.caseData.era.year,
-    text: `Осмотр места преступления завершён.\nИзъято улик: ${state.collected.length}.`,
-    sub: 'Следственная группа выдвигается по адресу жертвы',
-    duration: 3000
-  });
+    // Переезд
+    await playCutscene({
+      year: state.caseData.era.year,
+      text: `Осмотр места преступления завершён.\nИзъято улик: ${state.collected.length}.`,
+      sub: 'Следственная группа выдвигается по адресу жертвы',
+      duration: 3000
+    });
 
-  // Локация 2 — жилище жертвы
-  await new Promise(resolve => {
-    state.resolveLocation = resolve;
-    loadLocation(1);
-  });
+    // Локация 2 — жилище жертвы
+    await new Promise(resolve => {
+      state.resolveLocation = resolve;
+      loadLocation(1);
+    });
 
-  // Возвращение в отдел
-  await playCutscene({
-    year: state.caseData.era.year,
-    text: `Собраны все улики с двух мест.\nМатериалы переданы в аналитический отдел.`,
-    sub: 'Всего изъято: ' + state.collected.length,
-    duration: 3200
-  });
+    // Возвращение в отдел
+    await playCutscene({
+      year: state.caseData.era.year,
+      text: `Собраны все улики с двух мест.\nМатериалы переданы в аналитический отдел.`,
+      sub: 'Всего изъято: ' + state.collected.length,
+      duration: 3200
+    });
 
-  // Доска цепочек
-  showChainBoard();
+    // Доска цепочек
+    showChainBoard();
+  } catch(e) {
+    console.error('Ошибка старта игры:', e);
+    alert('Ошибка старта игры: ' + e.message);
+  }
 }
 
 function showChainBoard(){
