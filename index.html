@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>СЛЕДСТВИЕ — кооперативная детективная игра</title>
+<style>
+:root{--gold:#c9a227;--paper:#e8e2d4;--ink:#07080a;--red:#a33}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#07080a;color:#d8d2c4;
+  font-family:Georgia,'Times New Roman',serif;user-select:none}
+#app{position:fixed;inset:0}
+#vig{position:fixed;inset:0;pointer-events:none;z-index:5;
+  background:radial-gradient(ellipse at center,transparent 42%,rgba(0,0,0,.88) 100%)}
+#grain{position:fixed;inset:0;pointer-events:none;z-index:6;opacity:.05;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence baseFrequency='0.9' numOctaves='3'/></filter><rect width='120' height='120' filter='url(%23n)'/></svg>")}
+
+/* ---------- HUD ---------- */
+#hud{position:fixed;inset:0;pointer-events:none;z-index:10;font-size:14px}
+.panel{background:linear-gradient(180deg,rgba(14,16,20,.92),rgba(10,11,14,.88));
+  border:1px solid rgba(201,162,39,.35);border-radius:2px;
+  box-shadow:0 6px 30px rgba(0,0,0,.7),inset 0 0 40px rgba(0,0,0,.6)}
+#case-info{position:absolute;top:18px;left:18px;padding:14px 20px;max-width:340px}
+#case-info h1{font-size:13px;letter-spacing:.28em;color:var(--gold);font-weight:400;text-transform:uppercase}
+#case-info .line{font-size:15px;margin-top:6px;line-height:1.45;color:#cfc7b4}
+#case-info .num{font-size:26px;color:#e8e2d4;letter-spacing:.06em;margin-top:2px}
+#case-info .era{color:#9a8f78;font-style:italic;font-size:13px;margin-top:8px}
+
+#ev-panel{position:absolute;top:18px;right:18px;padding:14px 18px;width:290px}
+#ev-panel h2{font-size:11px;letter-spacing:.25em;color:var(--gold);text-transform:uppercase;font-weight:400;margin-bottom:10px}
+.ev-item{display:flex;gap:8px;align-items:flex-start;font-size:13px;padding:5px 0;
+  border-bottom:1px dashed rgba(201,162,39,.15);color:#bfb6a3}
+.ev-item:last-child{border:0}
+.ev-item .dot{color:var(--gold);font-size:11px;margin-top:2px}
+.ev-item.locked{opacity:.28;font-style:italic}
+
+#who{position:absolute;left:18px;bottom:18px;padding:10px 18px;font-size:13px;letter-spacing:.12em}
+#who b{color:var(--gold);font-weight:400}
+#help{position:absolute;right:18px;bottom:18px;padding:10px 16px;font-size:12px;
+  color:#8a8272;letter-spacing:.08em;text-align:right;line-height:1.6}
+#help kbd{display:inline-block;border:1px solid #4a4438;border-radius:3px;
+  padding:1px 6px;font-family:inherit;color:#c9c0ac;background:#141518;margin:0 1px}
+
+#prompt{position:absolute;left:50%;bottom:120px;transform:translateX(-50%);
+  padding:10px 26px;font-size:15px;letter-spacing:.1em;color:#f0e6c8;
+  background:rgba(10,11,14,.9);border:1px solid rgba(201,162,39,.6);
+  border-radius:2px;opacity:0;transition:.18s;white-space:nowrap}
+#prompt.on{opacity:1}
+#prompt kbd{color:var(--gold);font-family:inherit;border:1px solid var(--gold);
+  padding:1px 7px;border-radius:3px;margin-right:8px}
+
+#toast{position:absolute;left:50%;top:26%;transform:translateX(-50%);
+  font-size:17px;letter-spacing:.06em;color:#f2e7c4;text-align:center;
+  text-shadow:0 2px 20px #000;opacity:0;transition:.4s;max-width:70%;line-height:1.5}
+#toast.on{opacity:1}
+
+/* ---------- ЭКРАНЫ ---------- */
+.screen{position:fixed;inset:0;z-index:20;display:none;overflow:auto;
+  background:radial-gradient(ellipse at 50% 30%,#14161c 0%,#07080a 70%);
+  padding:40px 20px}
+.screen.on{display:block}
+.wrap{max-width:1000px;margin:0 auto}
+.stitle{font-size:13px;letter-spacing:.4em;color:var(--gold);text-transform:uppercase;
+  text-align:center;margin-bottom:12px}
+.h1{font-size:44px;text-align:center;letter-spacing:.04em;color:#efe7d3;
+  font-weight:400;line-height:1.1;text-shadow:0 4px 40px rgba(201,162,39,.25)}
+.sub{text-align:center;color:#8a8272;font-style:italic;margin-top:14px;font-size:16px}
+.card{background:linear-gradient(180deg,rgba(18,20,26,.95),rgba(12,13,17,.95));
+  border:1px solid rgba(201,162,39,.28);border-radius:3px;padding:24px 28px;
+  margin-top:22px;box-shadow:0 10px 50px rgba(0,0,0,.7)}
+.card h3{font-size:11px;letter-spacing:.26em;color:var(--gold);text-transform:uppercase;
+  font-weight:400;margin-bottom:14px}
+.btn{display:inline-block;padding:13px 34px;margin:8px 8px 0 0;cursor:pointer;
+  border:1px solid rgba(201,162,39,.6);background:rgba(201,162,39,.07);
+  color:#e8dfc6;font-family:inherit;font-size:14px;letter-spacing:.18em;
+  text-transform:uppercase;transition:.2s;border-radius:2px}
+.btn:hover{background:rgba(201,162,39,.2);box-shadow:0 0 28px rgba(201,162,39,.3)}
+.btn:disabled{opacity:.25;cursor:not-allowed;box-shadow:none;background:transparent}
+.btn.gold{background:linear-gradient(180deg,#d4ae35,#9d7f1d);color:#14120a;
+  border-color:#d4ae35;font-weight:700}
+.btn.gold:hover{box-shadow:0 0 40px rgba(201,162,39,.6)}
+.row{display:flex;gap:16px;flex-wrap:wrap}
+.roles{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
+@media(max-width:700px){.roles{grid-template-columns:1fr}.h1{font-size:30px}}
+.role{border:1px solid rgba(201,162,39,.25);padding:18px;border-radius:3px;
+  background:rgba(255,255,255,.015)}
+.role b{color:var(--gold);font-weight:400;letter-spacing:.14em;font-size:12px;
+  text-transform:uppercase;display:block;margin-bottom:8px}
+.role p{font-size:14px;color:#a89f8d;line-height:1.6}
+
+/* допрос */
+#suspects{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.sus{border:1px solid rgba(201,162,39,.22);border-radius:3px;padding:16px;cursor:pointer;
+  background:rgba(255,255,255,.015);transition:.2s}
+.sus:hover{border-color:rgba(201,162,39,.6);background:rgba(201,162,39,.06)}
+.sus.sel{border-color:var(--gold);background:rgba(201,162,39,.1)}
+.sus .nm{font-size:17px;color:#e8e0cc}
+.sus .rl{font-size:12px;color:#8a8272;margin-top:4px;font-style:italic}
+.sus .st{font-size:11px;letter-spacing:.15em;margin-top:10px;text-transform:uppercase}
+.sus .st.broken{color:#c07070}
+.sus .st.ok{color:#7a9a6a}
+
+#dialog{min-height:120px;margin-top:18px}
+.qa{margin-bottom:16px;animation:fade .4s}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.q{color:var(--gold);font-size:13px;letter-spacing:.1em;margin-bottom:6px}
+.a{color:#cfc6b2;font-size:15px;line-height:1.65;border-left:2px solid rgba(201,162,39,.3);
+  padding-left:14px}
+.a.lie{color:#e0b0b0}
+
+/* суд */
+.evpick{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.evp{padding:9px 16px;border:1px solid rgba(201,162,39,.3);border-radius:2px;
+  cursor:pointer;font-size:13px;color:#bfb6a3;transition:.2s}
+.evp:hover{border-color:var(--gold);color:#e8dfc6}
+.evp.sel{background:rgba(201,162,39,.18);border-color:var(--gold);color:#f0e6c8}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="vig"></div>
+<div id="grain"></div>
+
+<div id="hud">
+  <div id="case-info" class="panel">
+    <h1>Материалы дела</h1>
+    <div class="num" id="cnum">№ —</div>
+    <div class="line" id="cdesc">—</div>
+    <div class="era" id="cera">—</div>
+  </div>
+  <div id="ev-panel" class="panel">
+    <h2>Цепочка улик</h2>
+    <div id="evlist"></div>
+  </div>
+  <div id="who" class="panel">Ход: <b id="whoname">Криминалист</b></div>
+  <div id="help" class="panel">
+    <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> — идти ·
+    <kbd>Q</kbd><kbd>E</kbd> — поворот<br>
+    <kbd>F</kbd> — изъять улику
+  </div>
+  <div id="prompt"></div>
+  <div id="toast"></div>
+</div>
+
+<!-- СТАРТ -->
+<div class="screen on" id="scr-start">
+  <div class="wrap">
+    <div class="stitle">Кооперативная детективная игра</div>
+    <div class="h1">СЛЕДСТВИЕ</div>
+    <div class="sub">Два сыщика. Одно дело. Ни одной случайной улики.</div>
+    <div class="roles">
+      <div class="role"><b>Игрок 1 — Криминалист</b>
+        <p>Выезжает на место преступления. Осматривает комнату, находит и изымает физические улики. От точности его работы зависит всё дальнейшее следствие.</p></div>
+      <div class="role"><b>Игрок 2 — Следователь</b>
+        <p>Ведёт допросы, сопоставляет показания с уликами, ловит ложь. Затем представляет дело в суде и называет имя виновного.</p></div>
+    </div>
+    <div class="card">
+      <h3>Ход игры</h3>
+      <p style="color:#a89f8d;line-height:1.75;font-size:15px">
+        Осмотр места преступления → изъятие улик → допрос подозреваемых и предъявление улик →
+        судебное заседание → приговор.
+      </p>
+      <button class="btn gold" id="btn-start">Начать дело</button>
+    </div>
+  </div>
+</div>
+
+<!-- ДОПРОС -->
+<div class="screen" id="scr-inter">
+  <div class="wrap">
+    <div class="stitle">Игрок 2 · Следователь</div>
+    <div class="h1" style="font-size:30px">Допрос подозреваемых</div>
+    <div class="card"><h3>Подозреваемые</h3><div id="suspects"></div></div>
+    <div class="card" id="dossier" style="display:none">
+      <h3 id="dossier-name">—</h3>
+      <div id="dialog"></div>
+      <div id="inter-actions"></div>
+    </div>
+    <div style="text-align:center;margin-top:10px">
+      <button class="btn" id="btn-to-court">Передать дело в суд</button>
+    </div>
+  </div>
+</div>
+
+<!-- СУД -->
+<div class="screen" id="scr-court">
+  <div class="wrap">
+    <div class="stitle">Судебное заседание</div>
+    <div class="h1" style="font-size:30px">Кто виновен?</div>
+    <div class="card"><h3>Обвиняемый</h3><div id="court-suspects"></div></div>
+    <div class="card"><h3>Ключевая улика</h3><div class="evpick" id="court-ev"></div></div>
+    <div style="text-align:center;margin-top:14px">
+      <button class="btn gold" id="btn-verdict" disabled>Вынести приговор</button>
+    </div>
+  </div>
+</div>
+
+<!-- ВЕРДИКТ -->
+<div class="screen" id="scr-end">
+  <div class="wrap">
+    <div class="stitle" id="end-label">Приговор</div>
+    <div class="h1" id="end-title">—</div>
+    <div class="card"><div id="end-text" style="color:#a89f8d;line-height:1.8;font-size:15px"></div></div>
+    <div style="text-align:center;margin-top:20px">
+      <button class="btn gold" id="btn-again">Новое дело</button>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+/* =========================================================
+   0. УТИЛИТЫ
+   ========================================================= */
+const rnd  = a => a[(Math.random()*a.length)|0];
+const take = (a,n) => { const c=a.slice(), r=[]; while(r.length<n && c.length) r.push(c.splice((Math.random()*c.length)|0,1)[0]); return r; };
+const $ = id => document.getElementById(id);
+
+/* =========================================================
+   1. ГЕНЕРАТОР ДЕЛ (эпохи: СССР / 90-е / наши дни)
+   ========================================================= */
+const NAMES_M = ['Виктор','Аркадий','Геннадий','Николай','Юрий','Борис','Лев','Анатолий',
+                 'Семён','Пётр','Валерий','Игорь','Сергей','Олег','Роман','Данила','Артём'];
+const NAMES_F = ['Валентина','Людмила','Зоя','Тамара','Раиса','Нина','Галина','Клавдия',
+                 'Анна','Маргарита','Эльвира','Ольга','Ирина','Светлана','Дарья','Полина'];
+const SUR      = ['Кузнецов','Соловьёв','Дроздов','Ковалёв','Барсуков','Ерохин','Лебедев',
+                  'Тихонов','Скворцов','Мельников','Гусев','Крылов','Пантелеев','Заславский',
+                  'Абрамов','Рощин','Веретенников','Дубров'];
+
+const ERAS = [
+  {
+    year:1961, title:'СССР · хрущёвская оттепель',
+    places:['коммунальная квартира на Садовой','цех завода «Красный Октябрь»',
+            'комната в общежитии текстильщиц','кабинет райкома партии','дачный посёлок в Снегирях'],
+    crimes:['убийство','хищение социалистической собственности','поджог','отравление'],
+    means:['кухонный нож','молоток','крысиный яд','удавка','обрезок трубы','тяжёлый утюг'],
+    evidence:['отпечаток пальца на гранёном стакане','окурок папиросы «Беломор»',
+              'след обуви 42 размера','записка с адресом','ключ от сейфа',
+              'женский волос на пиджаке','гильза от ТТ','кошелёк с документами',
+              'обрывок квитанции сберкассы','след от топора на половице'],
+    alibis:['был на ночной смене, мастер подтвердит','стояла в очереди за колбасой',
+            'гостила у сестры в Подольске','сидел дома, слушал радио',
+            'дежурил в народной дружине','ездил на целину с бригадой'],
+    roles:['завскладом','бухгалтер','слесарь','медсестра','учительница','шофёр',
+           'продавец','инженер','сторож','парикмахер','секретарь райкома']
+  },
+  {
+    year:1979, title:'СССР · эпоха застоя',
+    places:['квартира в панельном доме на окраине','гаражный кооператив «Мотор»',
+            'кабинет директора НИИ','ресторан «Прага»','склад овощной базы'],
+    crimes:['убийство','хищение в особо крупных размерах','поджог','фальшивомонетничество'],
+    means:['финский нож','пистолет ТТ','хлороформ','удавка','кастет','яд для крыс'],
+    evidence:['след от импортной жевательной резинки','чек из валютного бара',
+              'отпечаток пальца на бутылке «Столичной»','пропуск в НИИ',
+              'фотография с дачи','иностранная монета','след обуви 44 размера',
+              'записка с номером счёта','обрывок авиабилета','сломанный каблук'],
+    alibis:['был в бане с товарищами','сидел на даче, копал грядки',
+            'вёз груз в Калинин, есть путёвка','был на дне рождения у тёщи',
+            'смотрел хоккей у соседа','ловил рыбу на Оке'],
+    roles:['директор НИИ','завскладом','водитель «Волги»','кассир','фарцовщик',
+           'инженер-конструктор','врач','стоматолог','тренер','завхоз']
+  },
+  {
+    year:1993, title:'Россия · лихие девяностые',
+    places:['квартира в новостройке на окраине','палатка у метро','офис фирмы «Вектор»',
+            'автосервис на обочине','ночной клуб «Метелица»'],
+    crimes:['убийство','разбойное нападение','поджог','вымогательство','похищение'],
+    means:['пистолет Макарова','обрез охотничьего ружья','бита','удавка','нож-бабочка','электрошокер'],
+    evidence:['стреляная гильза 9 мм','кожаная перчатка','ксерокопия долговой расписки',
+              'записка с номером пейджера','ключи от иномарки','след от кроссовка',
+              'пачка долларов с пометкой','пропуск в бизнес-центр','осколок фары','окурок «Мальборо»'],
+    alibis:['был на стрелке, братва подтвердит','сидел в кабаке до утра',
+            'ездил в Питер за товаром','был у любовницы, но об этом молчок',
+            'чинил машину в гараже','играл в казино'],
+    roles:['коммерческий директор','охранник','водитель','продавец палатки',
+           'директор ЧОП','бухгалтер','бармен','прораб','таможенный брокер']
+  },
+  {
+    year:2007, title:'Россия · нулевые',
+    places:['квартира в ЖК «Лазурный»','офис строительной компании',
+            'подземная парковка бизнес-центра','загородный коттедж','фитнес-клуб'],
+    crimes:['убийство','мошенничество в особо крупном размере','поджог','отравление'],
+    means:['травматический пистолет','кухонный нож','сильнодействующий яд',
+           'удавка','бейсбольная бита','поддельный документ'],
+    evidence:['след от шины внедорожника','визитка нотариуса','флешка с бухгалтерией',
+              'отпечаток пальца на бокале','пропуск на парковку','чек из ресторана',
+              'записка с паролем','след от туфельки 37 размера','окурок с фильтром','ключ-карта'],
+    alibis:['был на совещании, есть протокол','летал в Москву, посадочный талон при мне',
+            'ужинал с партнёрами в ресторане','был в фитнес-клубе, тренер видел',
+            'сидел с ребёнком дома','застрял в пробке на МКАД'],
+    roles:['гендиректор','финансовый директор','личный водитель','нотариус',
+           'риелтор','управляющий коттеджным посёлком','врач клиники','администратор']
+  },
+  {
+    year:2024, title:'Россия · наши дни',
+    places:['квартира в новом ЖК','коворкинг в центре города',
+            'даркстор на первом этаже','загородный дом в посёлке','студия в бывшем НИИ'],
+    crimes:['убийство','мошенничество с недвижимостью','поджог','киберпреступление'],
+    means:['кухонный нож','пистолет','дозированная доза препарата','удавка','электрошокер','поджог'],
+    evidence:['отпечаток пальца на стакане','след кроссовка у окна','чехол от телефона',
+              'распечатка переписки','ключ-карта от домофона','след от кофе на столе',
+              'фрагмент банковской выписки','волос на подушке','USB-накопитель','чек из даркстора'],
+    alibis:['был на удалёнке, есть логи созвона','ужинал с друзьями в баре',
+            'ехал на самокате, GPS подтвердит','был в спортзале, есть отметка',
+            'сидел с ребёнком','был в аэропорту, есть посадочный'],
+    roles:['продакт-менеджер','курьер','дизайнер','программист','арендодатель',
+           'управляющий','охранник ЖК','предприниматель','врач','блогер']
+  }
+];
+
+function generateCase(){
+  const era  = rnd(ERAS);
+  const place = rnd(era.places);
+  const crime = rnd(era.crimes);
+  const means = rnd(era.means);
+
+  // 4 улики, первая — ключевая
+  const pool = take(era.evidence, 5);
+  const keyEv  = pool[0];
+  const minorEv = pool.slice(1,4);
+
+  const count = 3 + ((Math.random()*2)|0); // 3–4 подозреваемых
+  const roles = take(era.roles, count);
+  const alibs = take(era.alibis, count);
+  const culpritIdx = (Math.random()*count)|0;
+
+  const usedNames = new Set();
+  const suspects = [];
+  for(let i=0;i<count;i++){
+    let nm;
+    do{
+      const female = Math.random()<0.4;
+      nm = (female ? rnd(NAMES_F) : rnd(NAMES_M)) + ' ' + rnd(SUR);
+    } while(usedNames.has(nm));
+    usedNames.add(nm);
+
+    const isCulprit = i===culpritIdx;
+    const weakness = isCulprit ? keyEv : minorEv[i % minorEv.length];
+
+    suspects.push({
+      name: nm,
+      role: roles[i],
+      alibi: alibs[i],
+      isCulprit,
+      weakness,
+      asked: new Set(),
+      exposed: false,
+      confessed: false
+    });
+  }
+
+  return {
+    num: `${(Math.random()*900+100)|0}-${era.year}`,
+    era, place, crime, means, keyEv, minorEv, suspects, culpritIdx,
+    // случайно выбираем 4 улики для 3D-сцены
+    sceneEvidence: take(pool, 4)
+  };
+}
+
+/* =========================================================
+   2. THREE.JS — СЦЕНА
+   ========================================================= */
+const app = $('app');
+const renderer = new THREE.WebGLRenderer({antialias:true, powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+app.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x08090c);
+scene.fog = new THREE.FogExp2(0x08090c, 0.022);
+
+const camera = new THREE.PerspectiveCamera(62, innerWidth/innerHeight, 0.05, 200);
+camera.rotation.order = 'YXZ';
+camera.position.set(0, 1.62, 5);
+
+/* ---- освещение ---- */
+const hemi = new THREE.HemisphereLight(0x9fb4d0, 0x2a2118, 0.55);
+scene.add(hemi);
+
+const key = new THREE.DirectionalLight(0xffd9a0, 1.35);
+key.position.set(-4, 8, 3);
+key.castShadow = true;
+key.shadow.mapSize.set(2048,2048);
+key.shadow.camera.left = -10; key.shadow.camera.right = 10;
+key.shadow.camera.top = 10;  key.shadow.camera.bottom = -10;
+key.shadow.bias = -0.0008;
+scene.add(key);
+
+const fill = new THREE.DirectionalLight(0x88a0cc, 0.35);
+fill.position.set(6, 5, -6);
+scene.add(fill);
+
+const lampLight = new THREE.PointLight(0xffb060, 22, 14, 2);
+lampLight.position.set(3.2, 2.4, 1.5);
+lampLight.castShadow = true;
+lampLight.shadow.mapSize.set(1024,1024);
+scene.add(lampLight);
+
+/* ---- мир ---- */
+let world = new THREE.Group();
+scene.add(world);
+
+const ANCHORS = [
+  new THREE.Vector3( 0.4, 0.84, -2.1),  // стол
+  new THREE.Vector3(-4.9, 0.62, -5.0),  // шкаф
+  new THREE.Vector3( 4.0, 0.58, -4.4),  // диван
+  new THREE.Vector3( 1.7, 0.06, -1.0),  // у тела
+  new THREE.Vector3(-2.6, 0.06,  1.6),  // пол
+  new THREE.Vector3( 6.5, 1.05, -6.6),  // подоконник
+];
+
+function makeBox(w,h,d,color,x,y,z,rough=0.85,metal=0.05){
+  const m = new THREE.Mesh(
+    new THREE.BoxGeometry(w,h,d),
+    new THREE.MeshStandardMaterial({color, roughness:rough, metalness:metal})
+  );
+  m.position.set(x,y,z);
+  m.castShadow = true; m.receiveShadow = true;
+  world.add(m);
+  return m;
+}
+
+function chalkTexture(){
+  const c = document.createElement('canvas'); c.width = 256; c.height = 512;
+  const g = c.getContext('2d');
+  g.strokeStyle = 'rgba(232,230,220,0.8)'; g.lineWidth = 6; g.lineCap = 'round';
+  g.beginPath(); g.arc(128, 90, 42, 0, Math.PI*2); g.stroke();
+  g.beginPath(); g.moveTo(128,132); g.lineTo(128,300); g.stroke();
+  g.beginPath(); g.moveTo(128,175); g.lineTo(58,245); g.lineTo(46,308); g.stroke();
+  g.beginPath(); g.moveTo(128,175); g.lineTo(198,252); g.lineTo(212,305); g.stroke();
+  g.beginPath(); g.moveTo(128,300); g.lineTo(88,432); g.lineTo(82,502); g.stroke();
+  g.beginPath(); g.moveTo(128,300); g.lineTo(172,432); g.lineTo(184,502); g.stroke();
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+function glowTexture(){
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d');
+  const grd = g.createRadialGradient(32,32,0,32,32,32);
+  grd.addColorStop(0,   'rgba(255,232,170,1)');
+  grd.addColorStop(0.28,'rgba(255,190,80,0.55)');
+  grd.addColorStop(1,   'rgba(255,150,0,0)');
+  g.fillStyle = grd; g.fillRect(0,0,64,64);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const GLOW_TEX = glowTexture();
+const CHALK_TEX = chalkTexture();
+
+function buildRoom(){
+  // очистка
+  world.traverse(o=>{
+    if(o.geometry) o.geometry.dispose();
+    if(o.material){
+      if(Array.isArray(o.material)) o.material.forEach(m=>m.dispose());
+      else o.material.dispose();
+    }
+  });
+  scene.remove(world);
+  world = new THREE.Group();
+  scene.add(world);
+
+  const floorMat = new THREE.MeshStandardMaterial({color:0x2b2620, roughness:0.92, metalness:0.02});
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(14,14,1,1), floorMat);
+  floor.rotation.x = -Math.PI/2;
+  floor.receiveShadow = true;
+  world.add(floor);
+
+  // ковёр
+  const rug = new THREE.Mesh(
+    new THREE.PlaneGeometry(5.5, 4),
+    new THREE.MeshStandardMaterial({color:0x4a2a22, roughness:0.98})
+  );
+  rug.rotation.x = -Math.PI/2; rug.position.set(0.5, 0.005, -1.2);
+  rug.receiveShadow = true;
+  world.add(rug);
+
+  const wallMat = new THREE.MeshStandardMaterial({color:0x3a352c, roughness:0.95});
+  const mkWall = (w,h,d,x,y,z)=>{
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), wallMat);
+    m.position.set(x,y,z); m.receiveShadow = true; m.castShadow = false;
+    world.add(m);
+  };
+  mkWall(14.4, 3.4, 0.25, 0, 1.7, -7);     // задняя
+  mkWall(0.25, 3.4, 14.4, -7, 1.7, 0);     // левая
+  mkWall(0.25, 3.4, 14.4,  7, 1.7, 0);     // правая
+  mkWall(14.4, 3.4, 0.25, 0, 1.7,  7);     // передняя
+  // потолок
+  const ceil = new THREE.Mesh(new THREE.PlaneGeometry(14.4,14.4),
+    new THREE.MeshStandardMaterial({color:0x1d1a16, roughness:1}));
+  ceil.rotation.x = Math.PI/2; ceil.position.y = 3.38;
+  world.add(ceil);
+
+  // окно (светится)
+  const win = new THREE.Mesh(
+    new THREE.PlaneGeometry(3.2, 1.8),
+    new THREE.MeshStandardMaterial({color:0x25384d, emissive:0x35526e, emissiveIntensity:0.9, roughness:0.4})
+  );
+  win.position.set(0, 1.9, -6.85);
+  world.add(win);
+  const winFrame = makeBox(3.5, 2.05, 0.08, 0x1a1712, 0, 1.9, -6.88, 0.9);
+
+  // мебель
+  makeBox(2.2, 0.08, 1.1, 0x6b4a2f, 0.4, 0.78, -2.1, 0.7);          // столешница
+  makeBox(0.1, 0.78, 0.1, 0x4a3320, -0.5, 0.39, -1.65);
+  makeBox(0.1, 0.78, 0.1, 0x4a3320,  1.3, 0.39, -1.65);
+  makeBox(0.1, 0.78, 0.1, 0x4a3320, -0.5, 0.39, -2.55);
+  makeBox(0.1, 0.78, 0.1, 0x4a3320,  1.3, 0.39, -2.55);
+
+  // стулья
+  const chair = (x,z,rot)=>{
+    const g = new THREE.Group();
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.5,0.07,0.5),
+      new THREE.MeshStandardMaterial({color:0x553a25, roughness:0.9}));
+    seat.position.y = 0.45; seat.castShadow = true; seat.receiveShadow = true;
+    g.add(seat);
+    const back = new THREE.Mesh(new THREE.BoxGeometry(0.5,0.6,0.06),
+      new THREE.MeshStandardMaterial({color:0x553a25, roughness:0.9}));
+    back.position.set(0,0.75,-0.22); back.castShadow = true;
+    g.add(back);
+    for(const dx of [-0.2,0.2]) for(const dz of [-0.2,0.2]){
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.05,0.45,0.05),
+        new THREE.MeshStandardMaterial({color:0x3a2718, roughness:0.9}));
+      leg.position.set(dx,0.22,dz); leg.castShadow = true; g.add(leg);
+    }
+    g.position.set(x,0,z); g.rotation.y = rot;
+    world.add(g);
+  };
+  chair(-0.4, -1.1, Math.PI);
+  chair(1.2, -1.2, Math.PI*0.85);
+  chair(0.3, -3.1, 0.1);
+
+  // шкаф
+  makeBox(1.8, 2.2, 0.7, 0x3f2f20, -4.9, 1.1, -5.6, 0.8);
+  makeBox(0.04, 1.9, 0.6, 0x2a1f15, -4.9, 1.1, -5.24, 0.6);
+
+  // диван
+  makeBox(2.6, 0.45, 1.1, 0x3a2c3c, 4.0, 0.25, -4.6, 0.95);
+  makeBox(2.6, 0.7, 0.3, 0x2e2330, 4.0, 0.6, -5.05, 0.95);
+  makeBox(0.28, 0.6, 1.1, 0x2e2330, 2.8, 0.42, -4.6, 0.95);
+  makeBox(0.28, 0.6, 1.1, 0x2e2330, 5.2, 0.42, -4.6, 0.95);
+
+  // торшер
+  const lampBase = makeBox(0.35,0.06,0.35, 0x2a2420, 3.2, 0.03, 1.5, 0.6, 0.4);
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,2.2,8),
+    new THREE.MeshStandardMaterial({color:0x3a342c, roughness:0.5, metalness:0.6}));
+  pole.position.set(3.2,1.1,1.5); pole.castShadow = true; world.add(pole);
+  const shade = new THREE.Mesh(new THREE.ConeGeometry(0.42,0.5,16,1,true),
+    new THREE.MeshStandardMaterial({color:0xd8c8a0, emissive:0xffbb66, emissiveIntensity:0.9,
+      side:THREE.DoubleSide, roughness:0.8}));
+  shade.position.set(3.2,2.3,1.5); world.add(shade);
+
+  // меловой контур тела
+  const chalk = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.3, 2.6),
+    new THREE.MeshBasicMaterial({map:CHALK_TEX, transparent:true, opacity:0.85, depthWrite:false})
+  );
+  chalk.rotation.x = -Math.PI/2;
+  chalk.rotation.z = 0.35;
+  chalk.position.set(1.7, 0.012, -1.0);
+  world.add(chalk);
+
+  // пыль в воздухе
+  const dustGeo = new THREE.BufferGeometry();
+  const N = 500, pos = new Float32Array(N*3);
+  for(let i=0;i<N;i++){
+    pos[i*3]   = (Math.random()-0.5)*13;
+    pos[i*3+1] = Math.random()*3.2;
+    pos[i*3+2] = (Math.random()-0.5)*13;
+  }
+  dustGeo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({
+    color:0xffe0b0, size:0.022, transparent:true, opacity:0.5,
+    depthWrite:false, blending:THREE.AdditiveBlending
+  }));
+  dust.name = 'dust';
+  world.add(dust);
+}
+
+/* ---- улики в 3D ---- */
+let evidenceObjects = [];
+
+function spawnEvidence(names){
+  evidenceObjects = [];
+  const spots = take(ANCHORS, names.length);
+  names.forEach((name, i) => {
+    const p = spots[i];
+    const g = new THREE.Group();
+    g.position.copy(p);
+
+    const core = new THREE.Mesh(
+      new THREE.IcosahedronGeometry(0.075, 0),
+      new THREE.MeshStandardMaterial({
+        color:0xffcf6e, emissive:0xff9b26, emissiveIntensity:2.2,
+        roughness:0.25, metalness:0.6
+      })
+    );
+    core.castShadow = false;
+    g.add(core);
+
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+      map:GLOW_TEX, transparent:true, depthWrite:false,
+      blending:THREE.AdditiveBlending, opacity:0.9
+    }));
+    sprite.scale.set(0.9, 0.9, 1);
+    g.add(sprite);
+
+    const light = new THREE.PointLight(0xffab3d, 3.2, 3.2, 2);
+    g.add(light);
+
+    g.userData = { name, core, sprite, light, taken:false, seed: Math.random()*10 };
+    world.add(g);
+    evidenceObjects.push(g);
+  });
+}
+
+/* ---- камера / управление ---- */
+const keys = {};
+let yaw = 0;
+let canMove = false;
+
+addEventListener('keydown', e => {
+  keys[e.key.toLowerCase()] = true;
+  if(e.key === ' ' || e.key === 'Tab') e.preventDefault();
+  if(e.key.toLowerCase() === 'f' && canMove) tryCollect();
+});
+addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+function updateCamera(dt){
+  if(!canMove) return;
+  const speed = 3.4;
+  if(keys['q']) yaw += dt * 1.9;
+  if(keys['e']) yaw -= dt * 1.9;
+
+  let fwd = (keys['w']?1:0) - (keys['s']?1:0);
+  let str = (keys['d']?1:0) - (keys['a']?1:0);
+  if(fwd || str){
+    const len = Math.hypot(fwd, str);
+    fwd/=len; str/=len;
+    const f = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
+    const r = new THREE.Vector3( Math.cos(yaw), 0, -Math.sin(yaw));
+    camera.position.addScaledVector(f, fwd*speed*dt);
+    camera.position.addScaledVector(r, str*speed*dt);
+    camera.position.x = THREE.MathUtils.clamp(camera.position.x, -6.3, 6.3);
+    camera.position.z = THREE.MathUtils.clamp(camera.position.z, -6.3, 6.3);
+  }
+  camera.position.y = 1.62;
+  camera.rotation.y = yaw;
+  camera.rotation.x = 0;
+
+  // лёгкое покачивание
+  camera.position.y += Math.sin(performance.now()*0.004) * 0.008;
+}
+
+let nearestEv = null;
+
+function updateEvidence(dt, t){
+  nearestEv = null;
+  let bestD = 2.1;
+
+  for(const g of evidenceObjects){
+    if(g.userData.taken) continue;
+    const s = g.userData.seed;
+    g.rotation.y += dt * 1.1;
+    g.position.y = g.userData.baseY !== undefined
+      ? g.userData.baseY
+      : (g.userData.baseY = g.position.y);
+    g.position.y = g.userData.baseY + Math.sin(t*1.6 + s) * 0.045;
+    const pulse = 0.75 + Math.sin(t*3 + s) * 0.25;
+    g.userData.sprite.material.opacity = pulse;
+    g.userData.light.intensity = 2.4 + pulse*1.4;
+
+    const d = camera.position.distanceTo(g.position);
+    if(d < bestD){ bestD = d; nearestEv = g; }
+  }
+
+  const pr = $('prompt');
+  if(nearestEv && canMove){
+    pr.innerHTML = `<kbd>F</kbd> изъять: ${nearestEv.userData.name}`;
+    pr.classList.add('on');
+  } else {
+    pr.classList.remove('on');
+  }
+}
+
+/* =========================================================
+   3. СОСТОЯНИЕ ИГРЫ
+   ========================================================= */
+const state = {
+  phase: 'start',
+  data: null,
+  collected: [],   // имена улик
+  selectedSuspect: null,
+  courtSuspect: null,
+  courtEvidence: null
+};
+
+/* =========================================================
+   4. UI
+   ========================================================= */
+function toast(msg, ms=2600){
+  const el = $('toast');
+  el.textContent = msg;
+  el.classList.add('on');
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>el.classList.remove('on'), ms);
+}
+
+function renderCaseInfo(){
+  const d = state.data;
+  $('cnum').textContent = '№ ' + d.num;
+  $('cdesc').textContent = `${d.crime[0].toUpperCase()+d.crime.slice(1)} — ${d.place}`;
+  $('cera').textContent = `${d.era.year} · ${d.era.title}`;
+}
+
+function renderEvidence(){
+  const list = $('evlist');
+  list.innerHTML = '';
+  const all = state.data.sceneEvidence;
+  all.forEach(name => {
+    const got = state.collected.includes(name);
+    const div = document.createElement('div');
+    div.className = 'ev-item' + (got ? '' : ' locked');
+    div.innerHTML = `<span class="dot">${got?'◆':'◇'}</span><span>${got?name:'не изъято'}</span>`;
+    list.appendChild(div);
+  });
+  const c = document.createElement('div');
+  c.className = 'ev-item';
+  c.style.marginTop = '8px';
+  c.style.color = 'var(--gold)';
+  c.textContent = `Изъято: ${state.collected.length} / ${all.length}`;
+  list.appendChild(c);
+}
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
+  if(id) $(id).classList.add('on');
+}
+
+function setPhase(p){
+  state.phase = p;
+  $('who').style.display = (p === 'scene') ? 'block' : 'none';
+  $('help').style.display = (p === 'scene') ? 'block' : 'none';
+  $('ev-panel').style.display = (p === 'scene') ? 'block' : 'none';
+  $('case-info').style.display = (p === 'start') ? 'none' : 'block';
+}
+
+/* =========================================================
+   5. ФАЗА 1 — ОСМОТР МЕСТА
+   ========================================================= */
+function startScene(){
+  canMove = true;
+  yaw = 0;
+  camera.position.set(0, 1.62, 5);
+  camera.rotation.set(0,0,0);
+
+  buildRoom();
+  spawnEvidence(state.data.sceneEvidence);
+  renderEvidence();
+  renderCaseInfo();
+
+  showScreen(null);
+  setPhase('scene');
+  $('whoname').textContent = 'Криминалист';
+
+  toast('Осмотрите помещение и изымите улики (F)', 3200);
+}
+
+function tryCollect(){
+  if(!nearestEv) return;
+  const g = nearestEv;
+  if(g.userData.taken) return;
+  g.userData.taken = true;
+
+  // анимация исчезновения
+  const start = performance.now();
+  const core = g.userData.core;
+  const spr  = g.userData.sprite;
+  const lgt  = g.userData.light;
+  const anim = () => {
+    const k = (performance.now() - start) / 420;
+    if(k >= 1){ world.remove(g); return; }
+    core.scale.setScalar(1 + k*2.5);
+    core.material.opacity = 1 - k;
+    core.material.transparent = true;
+    spr.scale.setScalar(0.9 + k*3);
+    spr.material.opacity = (1-k)*0.9;
+    lgt.intensity = (1-k)*4;
+    requestAnimationFrame(anim);
+  };
+  anim();
+
+  state.collected.push(g.userData.name);
+  renderEvidence();
+  toast('Изъято: ' + g.userData.name);
+
+  if(state.collected.length === state.data.sceneEvidence.length){
+    setTimeout(()=>{
+      toast('Все улики собраны. Передаём дело следователю.', 3600);
+      setTimeout(openInterrogation, 1800);
+    }, 700);
+  }
+}
+
+/* =========================================================
+   6. ФАЗА 2 — ДОПРОС
+   ========================================================= */
+function openInterrogation(){
+  canMove = false;
+  $('prompt').classList.remove('on');
+  setPhase('inter');
+  showScreen('scr-inter');
+  renderSuspects();
+  $('dossier').style.display = 'none';
+}
+
+function renderSuspects(){
+  const box = $('suspects');
+  box.innerHTML = '';
+  state.data.suspects.forEach((s, i) => {
+    const div = document.createElement('div');
+    div.className = 'sus';
+    const status = s.confessed
+      ? '<div class="st broken">Признание получено</div>'
+      : s.exposed
+        ? '<div class="st broken">Алиби опровергнуто</div>'
+        : '<div class="st ok">Алиби не проверено</div>';
+    div.innerHTML = `
+      <div class="nm">${s.name}</div>
+      <div class="rl">${s.role}</div>
+      <div style="font-size:13px;color:#9a917f;margin-top:8px;line-height:1.5">
+        «${s.alibi}»
+      </div>
+      ${status}`;
+    div.onclick = () => {
+      state.selectedSuspect = i;
+      document.querySelectorAll('.sus').forEach(x=>x.classList.remove('sel'));
+      div.classList.add('sel');
+      openDossier(i);
+    };
+    box.appendChild(div);
+  });
+}
+
+const QUESTIONS = [
+  'Где вы находились в момент преступления?',
+  'Вы были знакомы с потерпевшим?',
+  'Что вы можете сказать об этом предмете?'
+];
+
+function openDossier(idx){
+  const s = state.data.suspects[idx];
+  const dossier = $('dossier');
+  dossier.style.display = 'block';
+  $('dossier-name').textContent = `${s.name} — ${s.role}`;
+  const dialog = $('dialog');
+  const actions = $('inter-actions');
+  dialog.innerHTML = '';
+  actions.innerHTML = '';
+
+  // вопросы
+  QUESTIONS.forEach((q, qi) => {
+    const b = document.createElement('button');
+    b.className = 'btn';
+    b.style.fontSize = '11px';
+    b.style.padding = '9px 16px';
+    b.textContent = q;
+    b.disabled = s.asked.has(qi);
+    b.onclick = () => askQuestion(idx, qi, dialog, b);
+    actions.appendChild(b);
+  });
+}
+
+function askQuestion(idx, qi, dialog, btn){
+  const s = state.data.suspects[idx];
+  s.asked.add(qi);
+  btn.disabled = true;
+
+  let answer, isLie = false;
+
+  if(qi === 0){
+    answer = `«${s.alibi}».`;
+  } else if(qi === 1){
+    answer = s.isCulprit
+      ? `«Знал, конечно. Мы пересекались по работе. Не близко.»`
+      : `«Знал(а) шапочно. Здоровались, не более.»`;
+  } else {
+    // ключевой вопрос — про слабое место
+    if(s.isCulprit){
+      answer = `«${s.weakness}? Впервые слышу. Этого не может быть — я туда не заходил(а).»`;
+      isLie = true;
+    } else {
+      answer = `«Ах это… Да, моё. Но к делу отношения не имеет, клянусь.»`;
+      isLie = true;
+    }
+  }
+
+  const qa = document.createElement('div');
+  qa.className = 'qa';
+  qa.innerHTML = `<div class="q">${QUESTIONS[qi]}</div>
+                  <div class="a${isLie?' lie':''}">${answer}</div>`;
+  dialog.appendChild(qa);
+  dialog.scrollTop = dialog.scrollHeight;
+
+  // возможность предъявить улику
+  if(qi === 2 && state.collected.includes(s.weakness) && !s.exposed){
+    const presentBtn = document.createElement('button');
+    presentBtn.className = 'btn gold';
+    presentBtn.style.fontSize = '11px';
+    presentBtn.style.padding = '10px 20px';
+    presentBtn.textContent = `Предъявить улику: ${s.weakness}`;
+    presentBtn.onclick = () => presentEvidence(idx, dialog, presentBtn);
+    $('inter-actions').appendChild(presentBtn);
+  }
+}
+
+function presentEvidence(idx, dialog, btn){
+  const s = state.data.suspects[idx];
+  btn.disabled = true;
+  s.exposed = true;
+
+  const qa = document.createElement('div');
+  qa.className = 'qa';
+
+  if(s.isCulprit && s.weakness === state.data.keyEv){
+    s.confessed = true;
+    qa.innerHTML = `
+      <div class="q">Предъявлена улика</div>
+      <div class="a lie">
+        «…» Долгая пауза. ${s.name} медленно опускается на стул.
+        «Хорошо. Это моё. И я был(а) там. Но я не хотел(а) — так вышло.
+        Это было ${state.data.means}.»
+      </div>`;
+    toast('ПРИЗНАНИЕ ПОЛУЧЕНО', 3600);
+  } else {
+    qa.innerHTML = `
+      <div class="q">Предъявлена улика</div>
+      <div class="a">
+        «Да, это моё. Я скрывал(а) совсем другое — не связано с преступлением.
+        Но к убийству я отношения не имею.»
+        <br><br><span style="color:#7a9a6a">Алиби частично опровергнуто, но
+        это не ключевая улика.</span>
+      </div>`;
+    toast('Алиби опровергнуто, но улика не ключевая', 3000);
+  }
+
+  dialog.appendChild(qa);
+  dialog.scrollTop = dialog.scrollHeight;
+
+  // обновить карточки
+  const cards = document.querySelectorAll('.sus');
+  if(cards[idx]){
+    const st = cards[idx].querySelector('.st');
+    if(st){
+      st.className = 'st broken';
+      st.textContent = s.confessed ? 'Признание получено' : 'Алиби опровергнуто';
+    }
+  }
+}
+
+/* =========================================================
+   7. ФАЗА 3 — СУД
+   ========================================================= */
+function openCourt(){
+  $('prompt').classList.remove('on');
+  setPhase('court');
+  showScreen('scr-court');
+
+  const box = $('court-suspects');
+  box.innerHTML = '';
+  state.data.suspects.forEach((s, i) => {
+    const div = document.createElement('div');
+    div.className = 'sus';
+    div.style.display = 'inline-block';
+    div.style.marginRight = '12px';
+    div.style.marginTop = '8px';
+    div.innerHTML = `<div class="nm">${s.name}</div><div class="rl">${s.role}</div>`;
+    div.onclick = () => {
+      state.courtSuspect = i;
+      box.querySelectorAll('.sus').forEach(x=>x.classList.remove('sel'));
+      div.classList.add('sel');
+      checkVerdict();
+    };
+    box.appendChild(div);
+  });
+
+  const evBox = $('court-ev');
+  evBox.innerHTML = '';
+  state.data.sceneEvidence.forEach(name => {
+    const collected = state.collected.includes(name);
+    const div = document.createElement('div');
+    div.className = 'evp';
+    if(!collected){ div.style.opacity = '.3'; div.style.cursor = 'not-allowed'; }
+    div.textContent = collected ? name : name + ' (не изъято)';
+    if(collected){
+      div.onclick = () => {
+        state.courtEvidence = name;
+        evBox.querySelectorAll('.evp').forEach(x=>x.classList.remove('sel'));
+        div.classList.add('sel');
+        checkVerdict();
+      };
+    }
+    evBox.appendChild(div);
+  });
+}
+
+function checkVerdict(){
+  $('btn-verdict').disabled = !(state.courtSuspect !== null && state.courtEvidence);
+}
+
+function verdict(){
+  const d = state.data;
+  const s = d.suspects[state.courtSuspect];
+  const correctSuspect = state.courtSuspect === d.culpritIdx;
+  const correctEvidence = state.courtEvidence === d.keyEv;
+  const confessed = s.confessed;
+
+  let title, text, label;
+
+  if(correctSuspect && correctEvidence && confessed){
+    label = 'Приговор';
+    title = 'Виновен. Дело закрыто.';
+    text = `
+      Суд признал ${s.name} виновным. Признание, полученное на допросе,
+      подкреплено вещественной уликой — ${state.courtEvidence}.
+      Цепочка доказательств выстроена безупречно: место преступления,
+      изъятые следы, противоречия в показаниях. Приговор вступил в силу.`;
+  } else if(correctSuspect && correctEvidence){
+    label = 'Приговор';
+    title = 'Виновен — но признание не получено.';
+    text = `
+      Суд признал ${s.name} виновным по совокупности улик.
+      Однако на допросе признание так и не было получено —
+      защита настаивает на недопустимости части доказательств.
+      Дело устояло, но на тонком волоске.`;
+  } else if(correctSuspect){
+    label = 'Приговор';
+    title = 'Виновный назван верно. Улика — нет.';
+    text = `
+      ${s.name} действительно виновен. Но предъявленная улика
+      «${state.courtEvidence}» не является ключевой. Суд оправдал обвиняемого
+      за недостаточностью доказательств. Настоящая улика — «${d.keyEv}» —
+      осталась лежать в материалах дела.`;
+  } else {
+    label = 'Приговор';
+    title = 'Осуждён невиновный.';
+    text = `
+      Суд признал виновным ${s.name}. Но настоящий преступник —
+      ${d.suspects[d.culpritIdx].name}. Настоящая улика — «${d.keyEv}».
+      Следствие велось в неверном направлении, и правосудие совершило ошибку.`;
+  }
+
+  $('end-label').textContent = label;
+  $('end-title').textContent = title;
+  $('end-text').innerHTML = text;
+  showScreen('scr-end');
+  setPhase('end');
+}
+
+/* =========================================================
+   8. ЗАПУСК / ЦИКЛ
+   ========================================================= */
+function newCase(){
+  state.data = generateCase();
+  state.collected = [];
+  state.selectedSuspect = null;
+  state.courtSuspect = null;
+  state.courtEvidence = null;
+  startScene();
+}
+
+$('btn-start').onclick = () => { showScreen(null); newCase(); };
+$('btn-again').onclick = () => { showScreen(null); newCase(); };
+$('btn-to-court').onclick = openCourt;
+$('btn-verdict').onclick = verdict;
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+const clock = new THREE.Clock();
+
+function loop(){
+  requestAnimationFrame(loop);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const t = performance.now() / 1000;
+
+  updateCamera(dt);
+  if(state.phase === 'scene'){
+    updateEvidence(dt, t);
+  }
+
+  // пыль
+  const dust = world.getObjectByName('dust');
+  if(dust){
+    dust.rotation.y += dt * 0.012;
+    dust.position.y = Math.sin(t*0.25) * 0.08;
+  }
+
+  // мерцание лампы
+  lampLight.intensity = 20 + Math.sin(t*7.3)*1.6 + Math.sin(t*2.1)*1.2;
+
+  renderer.render(scene, camera);
+}
+loop();
+
+/* стартовая сцена-заглушка */
+buildRoom();
+</script>
+</body>
+</html>
